@@ -1,0 +1,82 @@
+#!/bin/bash
+
+url1=http://255.255.255.255/html/backup
+url2=http://255.255.255.255/html/backup
+url3=http://255.255.255.255/html/backup
+myfile=rcms18_`date +%Y%m%d`.sql
+mylog=rcms18_`date +%Y%m%d`.txt
+webfile=htdocs_`date +%Y%m%d`.zip
+weblog=htdocs_`date +%Y%m%d`.txt
+mypath=/var/www/html/backup/mysql
+webpath=/var/www/html/backup/web
+webres=/var/www/html/backup/index.php
+downres1=/var/www/html/backup/backup_download.txt
+downres2=/var/www/html/backup/backup_download2.sh
+downres3=/var/www/html/backup/backup_download3.sh
+
+#mkdir
+mkdir -pv $mypath
+mkdir -pv $webpath
+
+#delete 15days begin old files
+cd $mypath
+find $mypath -type f -mtime +15 -exec rm {} \;
+cd $webpath
+find $webpath -type f -mtime +15 -exec rm {} \;
+
+#table_thead
+echo "<table border='5' width='100%'>" > $webres
+echo "<tr><td bgcolor='orange'>" >> $webres
+echo "<h1>最新备份结果</h1>" >> $webres 
+
+#mysql backup
+cd $mypath
+mysqldump -u root --password=rs rcms18_lkyzdx > $myfile | > $mylog
+if [ -f $mypath/$myfile ]; then
+	zip -q -m $myfile.zip $myfile | >> $mylog
+	if [ -f $myfile.zip ]; then
+		echo "<p>MySQL备份结果==&lt<a href='mysql/$myfile.zip'>$myfile.zip</a></p>" >> $webres
+		echo "wget $url1/mysql/$myfile.zip" > $downres1
+		echo "wget $url2/mysql/$myfile.zip" > $downres2
+		echo "wget $url3/mysql/$myfile.zip" > $downres3
+	else
+		echo "<p>MySQL备份结果==&lt<a href='mysql/$myfile'>$myfile</a></p>" >> $webres
+		echo "wget $url1/mysql/$myfile" > $downres1
+		echo "wget $url2/mysql/$myfile" > $downres2
+		echo "wget $url3/mysql/$myfile" > $downres3
+	fi
+	rm -rf $mylog
+else
+	echo "$info备份失败，请<a href='mysql/$mylog'>查看日志</a>。" >> $webres
+fi
+
+#website_file backup
+cd /var/www/
+zip -q -r $webpath/$webfile htdocs/ > $weblog
+if [ -f $webpath/$webfile ]; then
+	echo "<p>Web备份结果==&lt<a href='web/$webfile'>$webfile</a></p>" >> $webres
+	echo "wget $url1/web/$webfile" >> $downres1
+	echo "wget $url2/web/$webfile" >> $downres2
+	echo "wget $url3/web/$webfile" >> $downres3
+	rm -rf $weblog
+else
+	echo "<p>Web备份结果==&lt备份失败，请<a href='web/$weblog'>查看日志</a></p>" >> $webres
+fi
+echo "<p>备份下载文件：<a href='down.php?file=backup_download.txt&rfname=lkyzdx_backup.bat' target='_blank'>Windows链接</a>" >> $webres
+echo "&nbsp;<a href='down.php?file=backup_download.txt&rfname=lkyzdx_backup.sh' target='_blank'>Linux链接</a></p>" >> $webres
+echo "<p>&nbsp;</p>" >> $webres
+echo "<p>&nbsp;</p>" >> $webres
+echo "<p>&nbsp;</p>" >> $webres
+echo "<p>&nbsp;</p>" >> $webres
+echo "<p>&nbsp;</p>" >> $webres
+echo "<p>&nbsp;</p>" >> $webres
+
+#view history file
+echo "</td>" >> $webres
+echo "<td><iframe src='backup_list.php' width='100%' height='100%'></iframe></td></tr>" >> $webres
+echo "</table>" >> $webres
+echo "<p align='center'><b>制作时间：`date`</b></p>" >> $webres
+
+chmod +x $downres1
+chmod +x $downres2
+chmod +x $downres3
